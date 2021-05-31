@@ -1,0 +1,36 @@
+with (import <nixpkgs> {});
+let
+  rpath = lib.concatStringsSep ":" [
+    #atomEnv.libPath
+    "${lib.makeLibraryPath [libsecret]}/libsecret-1.so.0"
+    "$out/libexec/@emacs-grammarly"
+  ];
+  postFixup = ''
+    patchelf \
+      --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+      --set-rpath "${rpath}" \
+      $out/bin/keytar
+
+    patchelf \
+      --set-rpath "${rpath}" \
+      $out/lib/vscode/resources/app/node_modules.asar.unpacked/keytar/build/Release/keytar.node
+
+    mkdir -p $out/lib/keytar
+    ln -s ${lib.makeLibraryPath [libsecret]}/libsecret-1.so.0 $out/lib/keytar/libsecret-1.so.0
+  '';
+
+in
+rec {
+  keytar = (mkYarnPackage {
+    name = "keytar";
+    src = ./.;
+    packageJSON = ./package.json;
+    yarnLock = ./yarn.lock;
+    yarnNix = ./yarn.nix;
+  }).overrideAttrs (old: {
+    propogatedBuildInputs = [ libsecret ];
+    inherit postFixup;
+  });
+  # https://code.vitrostudios.com/phil/my_nixpkgs_fork/-/blob/2fec9c6e297e02718db6be53d645524f0052a7bc/pkgs/applications/editors/vscode/default.nix
+  # https://logs.nix.samueldr.com/nixos/2019-01-14
+}
