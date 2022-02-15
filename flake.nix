@@ -3,6 +3,8 @@
 
   inputs.utils.url = "github:numtide/flake-utils";
   inputs.devshell.url = "github:numtide/devshell";
+  inputs.devshell.inputs.flake-utils.follows = "utils";
+  inputs.devshell.inputs.nixpkgs.follows = "nixpkgs";
 
   outputs = { self, nixpkgs, utils, devshell }:
     { overlay = final: prev: {
